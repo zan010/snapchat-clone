@@ -51,14 +51,27 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           
       - name: Create Release
-        if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v1.0.${{ github.run_number }}
-          name: SnapClone v1.0.${{ github.run_number }}
+          tag_name: v2.0.${{ github.run_number }}
+          name: SnapClone v2.0.${{ github.run_number }}
           files: android/app/build/outputs/apk/debug/app-debug.apk
           draft: false
           prerelease: false
+          body: |
+            ## What's New in v2.0
+            - 🎨 Bitmoji-style Avatars
+            - 📖 Stories
+            - 👥 Group Chats
+            - 🗺️ Snap Map
+            - 🌟 Spotlight/Discover
+            - 💾 Memories
+            - 🔥 Streak Widget
+            - 🏆 Badges & Achievements
+            - 🔍 Message Search
+            - ⚡ Quick Add Friends
+            - 20+ Camera Filters
+            - And much more!
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
