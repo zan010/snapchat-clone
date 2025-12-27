@@ -2,9 +2,9 @@ import { useState, useEffect, useCallback, memo } from 'react'
 import { collection, query, where, onSnapshot, doc, getDoc, getDocs, orderBy, limit } from 'firebase/firestore'
 import { db } from '../firebase'
 import { useAuth } from '../App'
-import { Settings, Flame, MessageCircle, Palette, Sparkles, Send } from 'lucide-react'
+import { Settings, Flame, MessageCircle, Palette, Sparkles, Send, Users, Plus } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import Stories from './Stories'
+import Avatar from './Avatar'
 
 // Best friend emojis based on interaction level
 const getBestFriendEmoji = (streak) => {
@@ -108,11 +108,37 @@ const ConversationItem = memo(({ conv, onConversationClick, currentUserId }) => 
   )
 })
 
-function ChatList({ onViewSnap, onOpenChat, onOpenSettings, onAddStory }) {
+function ChatList({ onViewSnap, onOpenChat, onOpenSettings, onOpenGroup, onCreateGroup, onAddStory }) {
   const { user, userData } = useAuth()
   const navigate = useNavigate()
   const [conversations, setConversations] = useState([])
+  const [groups, setGroups] = useState([])
   const [loading, setLoading] = useState(true)
+
+  // Fetch groups
+  useEffect(() => {
+    if (!user) return
+
+    const groupsQuery = query(
+      collection(db, 'groups'),
+      where('members', 'array-contains', user.uid)
+    )
+
+    const unsubscribe = onSnapshot(groupsQuery, (snapshot) => {
+      const groupsList = []
+      snapshot.forEach(doc => {
+        groupsList.push({ id: doc.id, ...doc.data() })
+      })
+      groupsList.sort((a, b) => {
+        const aTime = a.lastMessageAt || a.createdAt || '1970-01-01'
+        const bTime = b.lastMessageAt || b.createdAt || '1970-01-01'
+        return new Date(bTime) - new Date(aTime)
+      })
+      setGroups(groupsList)
+    })
+
+    return () => unsubscribe()
+  }, [user])
 
   // Optimized data fetching with parallel requests
   const fetchConversations = useCallback(async () => {
@@ -242,16 +268,50 @@ function ChatList({ onViewSnap, onOpenChat, onOpenSettings, onAddStory }) {
         </button>
       </div>
 
-      {/* Stories Section */}
-      <Stories onAddStory={onAddStory} />
+      {/* Groups Section */}
+      {groups.length > 0 && (
+        <div className="friends-list" style={{ marginBottom: 0, paddingBottom: 0 }}>
+          <div className="section-header" style={{ marginBottom: '8px' }}>
+            <Users size={16} />
+            <span>Groups</span>
+            <button 
+              className="create-group-btn"
+              onClick={onCreateGroup}
+              style={{ marginLeft: 'auto' }}
+            >
+              <Plus size={16} />
+            </button>
+          </div>
+          {groups.map((group) => (
+            <div 
+              key={group.id}
+              className="friend-item group-item"
+              onClick={() => onOpenGroup(group)}
+            >
+              <div className="group-avatar-icon">
+                {group.emoji || '👥'}
+              </div>
+              <div className="friend-info">
+                <div className="friend-name">{group.name}</div>
+                <div className="friend-status">
+                  <span>{group.members?.length} members</span>
+                  {group.lastMessage && (
+                    <span> • {group.lastMessage.slice(0, 20)}...</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
-      {conversations.length === 0 ? (
+      {conversations.length === 0 && groups.length === 0 ? (
         <div className="empty-state">
           <MessageCircle size={64} />
           <h3>No friends yet</h3>
           <p>Add friends to start chatting and snapping!</p>
         </div>
-      ) : (
+      ) : conversations.length > 0 && (
         <div className="friends-list">
           <div className="section-header">
             <Sparkles size={16} />

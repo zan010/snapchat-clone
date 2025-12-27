@@ -3,8 +3,11 @@ import { signOut } from 'firebase/auth'
 import { auth } from '../firebase'
 import { useAuth } from '../App'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, User, Mail, Calendar, Award, Copy, Check, Download, Share2, Bell, BellOff } from 'lucide-react'
+import { ArrowLeft, User, Mail, Calendar, Award, Copy, Check, Download, Share2, Bell, Image, Palette, ChevronRight } from 'lucide-react'
 import { format } from 'date-fns'
+import Avatar from './Avatar'
+import AvatarCreator from './AvatarCreator'
+import Memories from './Memories'
 
 export default function Profile() {
   const { userData } = useAuth()
@@ -13,6 +16,8 @@ export default function Profile() {
   const [loggingOut, setLoggingOut] = useState(false)
   const [installPrompt, setInstallPrompt] = useState(null)
   const [isInstalled, setIsInstalled] = useState(false)
+  const [showAvatarCreator, setShowAvatarCreator] = useState(false)
+  const [showMemories, setShowMemories] = useState(false)
   const [notifPermission, setNotifPermission] = useState(
     'Notification' in window ? Notification.permission : 'denied'
   )
@@ -113,8 +118,29 @@ export default function Profile() {
       </div>
 
       <div style={{ padding: '24px', textAlign: 'center' }}>
-        <div className="profile-avatar">
-          {getInitials(userData.displayName)}
+        <div 
+          className="profile-avatar-container"
+          onClick={() => setShowAvatarCreator(true)}
+          style={{ cursor: 'pointer', position: 'relative', display: 'inline-block' }}
+        >
+          <Avatar avatar={userData.avatar} name={userData.displayName} size={100} />
+          <div 
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              right: 0,
+              width: 32,
+              height: 32,
+              borderRadius: '50%',
+              background: 'var(--accent)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: '2px solid var(--bg-primary)'
+            }}
+          >
+            <Palette size={16} color="#000" />
+          </div>
         </div>
         
         <h2 className="profile-name">{userData.displayName}</h2>
@@ -137,6 +163,33 @@ export default function Profile() {
             <div className="stat-value">{userData.friends?.length || 0}</div>
             <div className="stat-label">Friends</div>
           </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="profile-actions">
+          <button className="profile-action-btn" onClick={() => setShowMemories(true)}>
+            <div className="action-icon" style={{ background: 'linear-gradient(135deg, #FF6B6B, #FF8E53)' }}>
+              <Image size={20} color="#fff" />
+            </div>
+            <span>Memories</span>
+            <ChevronRight size={16} color="#666" />
+          </button>
+          
+          <button className="profile-action-btn" onClick={() => setShowAvatarCreator(true)}>
+            <div className="action-icon" style={{ background: 'linear-gradient(135deg, #667eea, #764ba2)' }}>
+              <Palette size={20} color="#fff" />
+            </div>
+            <span>Edit Avatar</span>
+            <ChevronRight size={16} color="#666" />
+          </button>
+          
+          <button className="profile-action-btn" onClick={() => navigate('/settings')}>
+            <div className="action-icon" style={{ background: 'linear-gradient(135deg, #11998e, #38ef7d)' }}>
+              <Award size={20} color="#fff" />
+            </div>
+            <span>Themes</span>
+            <ChevronRight size={16} color="#666" />
+          </button>
         </div>
 
         <div className="profile-section">
@@ -287,6 +340,59 @@ export default function Profile() {
           {loggingOut ? 'Logging out...' : 'Log Out'}
         </button>
       </div>
+
+      {/* Avatar Creator Modal */}
+      {showAvatarCreator && (
+        <AvatarCreator onClose={() => setShowAvatarCreator(false)} />
+      )}
+
+      {/* Memories Modal */}
+      {showMemories && (
+        <Memories onClose={() => setShowMemories(false)} />
+      )}
+
+      <style>{`
+        .profile-actions {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          margin: 20px 0;
+        }
+
+        .profile-action-btn {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 14px 16px;
+          background: var(--bg-secondary);
+          border: none;
+          border-radius: 14px;
+          cursor: pointer;
+          transition: all 0.2s;
+          text-align: left;
+        }
+
+        .profile-action-btn:active {
+          transform: scale(0.98);
+          background: rgba(255,255,255,0.1);
+        }
+
+        .action-icon {
+          width: 40px;
+          height: 40px;
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .profile-action-btn span {
+          flex: 1;
+          color: #fff;
+          font-size: 15px;
+          font-weight: 500;
+        }
+      `}</style>
     </div>
   )
 }

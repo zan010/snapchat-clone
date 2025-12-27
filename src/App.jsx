@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext } from 'react'
+import { useState, useEffect, createContext, useContext, Component } from 'react'
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { onAuthStateChanged } from 'firebase/auth'
 import { doc, onSnapshot } from 'firebase/firestore'
@@ -7,6 +7,59 @@ import { ThemeProvider } from './context/ThemeContext'
 import Login from './components/Login'
 import Signup from './components/Signup'
 import MainLayout from './components/MainLayout'
+
+// Error Boundary for catching crashes
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props)
+    this.state = { hasError: false, error: null }
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error }
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('App Error:', error, errorInfo)
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ 
+          padding: '40px', 
+          textAlign: 'center', 
+          background: '#000', 
+          color: '#fff',
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <h2 style={{ color: '#FFFC00', marginBottom: '16px' }}>Something went wrong</h2>
+          <p style={{ color: '#888', marginBottom: '24px' }}>{this.state.error?.message}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            style={{
+              padding: '12px 32px',
+              background: '#FFFC00',
+              color: '#000',
+              border: 'none',
+              borderRadius: '24px',
+              fontSize: '16px',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }}
+          >
+            Reload App
+          </button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
 // Loading spinner component
 const LoadingSpinner = () => (
@@ -92,32 +145,46 @@ function PublicRoute({ children }) {
 }
 
 function App() {
+  const [appReady, setAppReady] = useState(false)
+
+  useEffect(() => {
+    // Small delay to ensure WebView is ready
+    const timer = setTimeout(() => setAppReady(true), 100)
+    return () => clearTimeout(timer)
+  }, [])
+
+  if (!appReady) {
+    return <LoadingSpinner />
+  }
+
   return (
-    <HashRouter>
-      <ThemeProvider>
-        <AuthProvider>
-          <div className="app">
-            <Routes>
-              <Route path="/login" element={
-                <PublicRoute>
-                  <Login />
-                </PublicRoute>
-              } />
-              <Route path="/signup" element={
-                <PublicRoute>
-                  <Signup />
-                </PublicRoute>
-              } />
-              <Route path="/*" element={
-                <PrivateRoute>
-                  <MainLayout />
-                </PrivateRoute>
-              } />
-            </Routes>
-          </div>
-        </AuthProvider>
-      </ThemeProvider>
-    </HashRouter>
+    <ErrorBoundary>
+      <HashRouter>
+        <ThemeProvider>
+          <AuthProvider>
+            <div className="app">
+              <Routes>
+                <Route path="/login" element={
+                  <PublicRoute>
+                    <Login />
+                  </PublicRoute>
+                } />
+                <Route path="/signup" element={
+                  <PublicRoute>
+                    <Signup />
+                  </PublicRoute>
+                } />
+                <Route path="/*" element={
+                  <PrivateRoute>
+                    <MainLayout />
+                  </PrivateRoute>
+                } />
+              </Routes>
+            </div>
+          </AuthProvider>
+        </ThemeProvider>
+      </HashRouter>
+    </ErrorBoundary>
   )
 }
 

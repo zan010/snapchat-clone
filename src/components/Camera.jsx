@@ -3,7 +3,7 @@ import { collection, addDoc, doc, getDoc, setDoc, updateDoc, increment } from 'f
 import { db } from '../firebase'
 import { useAuth } from '../App'
 import { X, RotateCcw, Send, Image, Check, Flame, Sparkles } from 'lucide-react'
-import CameraFilters, { filters } from './CameraFilters'
+import CameraFilters, { filters, stickers } from './CameraFilters'
 
 export default function Camera({ onClose, preselectedFriend = null }) {
   const { user, userData } = useAuth()
@@ -26,8 +26,15 @@ export default function Camera({ onClose, preselectedFriend = null }) {
   const [toast, setToast] = useState(null)
   const [mode, setMode] = useState('photo') // 'photo' or 'video'
   const [selectedFilter, setSelectedFilter] = useState('none')
+  const [selectedSticker, setSelectedSticker] = useState('none')
   const [showFilters, setShowFilters] = useState(false)
   const isStoryMode = preselectedFriend === 'story'
+
+  // Get sticker emoji
+  const getStickerEmoji = () => {
+    const sticker = stickers?.find(s => s.id === selectedSticker)
+    return sticker?.emoji || null
+  }
 
   // Check and request permissions first
   const checkPermissions = async () => {
@@ -547,8 +554,17 @@ export default function Camera({ onClose, preselectedFriend = null }) {
               <CameraFilters 
                 selectedFilter={selectedFilter}
                 onSelectFilter={setSelectedFilter}
+                selectedSticker={selectedSticker}
+                onSelectSticker={setSelectedSticker}
                 previewImage={null}
               />
+            )}
+            
+            {/* Sticker Overlay */}
+            {selectedSticker !== 'none' && getStickerEmoji() && (
+              <div className="sticker-overlay">
+                <span className="sticker-display">{getStickerEmoji()}</span>
+              </div>
             )}
             {isRecording && (
               <div className="recording-indicator">

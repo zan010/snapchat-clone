@@ -8,9 +8,12 @@ import { useAuth } from '../App'
 import { ArrowLeft, Send, Camera, Phone, Video, Mic, Square, Play } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 
+// Extended reactions list
+const REACTIONS = ['❤️', '😂', '😮', '😢', '😡', '👍', '🔥', '💯', '🙏', '💀', '👀', '🎉']
+
 // Memoized message component
 const ChatMessage = memo(({ msg, isOwn, onDoubleClick, showReactions, onAddReaction }) => {
-  const reactions = ['❤️', '😂', '😮', '😢', '😡', '👍']
+  const reactions = REACTIONS
   
   return (
     <div 

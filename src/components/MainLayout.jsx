@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
-import { MessageCircle, Users, Camera } from 'lucide-react'
+import { MessageCircle, Users, Camera, Map, Sparkles } from 'lucide-react'
 import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore'
 import { db } from '../firebase'
 import { useAuth } from '../App'
@@ -14,6 +14,12 @@ import NotificationHandler from './NotificationHandler'
 import Settings from './Settings'
 import VideoCall from './VideoCall'
 import InstallBanner from './InstallBanner'
+import Stories from './Stories'
+import GroupChat from './GroupChat'
+import CreateGroup from './CreateGroup'
+import SnapMap from './SnapMap'
+import Spotlight from './Spotlight'
+import QuickAdd from './QuickAdd'
 
 export default function MainLayout() {
   const { user } = useAuth()
@@ -26,6 +32,11 @@ export default function MainLayout() {
   const [showSettings, setShowSettings] = useState(false)
   const [activeCall, setActiveCall] = useState(null)
   const [incomingCall, setIncomingCall] = useState(null)
+  const [activeGroup, setActiveGroup] = useState(null)
+  const [showCreateGroup, setShowCreateGroup] = useState(false)
+  const [showMap, setShowMap] = useState(false)
+  const [showSpotlight, setShowSpotlight] = useState(false)
+  const [showQuickAdd, setShowQuickAdd] = useState(false)
 
   // Listen for incoming calls
   useEffect(() => {
@@ -101,15 +112,23 @@ export default function MainLayout() {
       <div className="content">
         <Routes>
           <Route path="/" element={
-            <ChatList 
-              onViewSnap={setViewingSnap} 
-              onOpenChat={setActiveChat}
-              onOpenSettings={() => setShowSettings(true)}
-              onAddStory={() => {
+            <>
+              <Stories onCaptureStory={() => {
                 setCameraRecipient('story')
                 setShowCamera(true)
-              }}
-            />
+              }} />
+              <ChatList 
+                onViewSnap={setViewingSnap} 
+                onOpenChat={setActiveChat}
+                onOpenSettings={() => setShowSettings(true)}
+                onOpenGroup={setActiveGroup}
+                onCreateGroup={() => setShowCreateGroup(true)}
+                onAddStory={() => {
+                  setCameraRecipient('story')
+                  setShowCamera(true)
+                }}
+              />
+            </>
           } />
           <Route path="/friends" element={<FriendsList />} />
           <Route path="/profile" element={<Profile />} />
@@ -126,6 +145,14 @@ export default function MainLayout() {
         </button>
         
         <button 
+          className="nav-btn"
+          onClick={() => setShowMap(true)}
+        >
+          <Map />
+          <span>Map</span>
+        </button>
+        
+        <button 
           className="nav-btn-camera"
           onClick={() => handleOpenCamera()}
         >
@@ -138,6 +165,14 @@ export default function MainLayout() {
         >
           <Users />
           <span>Friends</span>
+        </button>
+        
+        <button 
+          className="nav-btn"
+          onClick={() => setShowSpotlight(true)}
+        >
+          <Sparkles />
+          <span>Spotlight</span>
         </button>
       </nav>
 
@@ -169,6 +204,44 @@ export default function MainLayout() {
 
       {showSettings && (
         <Settings onClose={() => setShowSettings(false)} />
+      )}
+
+      {/* Group Chat */}
+      {activeGroup && (
+        <GroupChat 
+          group={activeGroup} 
+          onClose={() => setActiveGroup(null)}
+          onOpenCamera={() => {
+            setActiveGroup(null)
+            handleOpenCamera()
+          }}
+        />
+      )}
+
+      {/* Create Group */}
+      {showCreateGroup && (
+        <CreateGroup 
+          onClose={() => setShowCreateGroup(false)}
+          onGroupCreated={(group) => {
+            setShowCreateGroup(false)
+            setActiveGroup(group)
+          }}
+        />
+      )}
+
+      {/* Snap Map */}
+      {showMap && (
+        <SnapMap onClose={() => setShowMap(false)} />
+      )}
+
+      {/* Spotlight */}
+      {showSpotlight && (
+        <Spotlight onClose={() => setShowSpotlight(false)} />
+      )}
+
+      {/* Quick Add */}
+      {showQuickAdd && (
+        <QuickAdd onClose={() => setShowQuickAdd(false)} />
       )}
 
       {/* Active Call */}

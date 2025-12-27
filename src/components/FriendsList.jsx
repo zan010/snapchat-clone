@@ -5,7 +5,8 @@ import {
 } from 'firebase/firestore'
 import { db } from '../firebase'
 import { useAuth } from '../App'
-import { Search, UserPlus, Check, X, Clock, Flame, Users } from 'lucide-react'
+import { Search, UserPlus, Check, X, Clock, Flame, Users, Zap } from 'lucide-react'
+import QuickAdd from './QuickAdd'
 
 export default function FriendsList() {
   const { user, userData } = useAuth()
@@ -18,6 +19,7 @@ export default function FriendsList() {
   const [friends, setFriends] = useState([])
   const [streaks, setStreaks] = useState({})
   const [toast, setToast] = useState(null)
+  const [showQuickAdd, setShowQuickAdd] = useState(false)
 
   // Fetch friend requests
   useEffect(() => {
@@ -218,7 +220,18 @@ export default function FriendsList() {
   return (
     <div className="friends-screen">
       <div className="header">
+        <div style={{ width: 40 }} />
         <h1 className="header-title">Friends</h1>
+        <button 
+          className="header-btn quick-add-btn"
+          onClick={() => setShowQuickAdd(true)}
+          style={{ 
+            background: 'linear-gradient(135deg, var(--accent), #FF9500)',
+            borderRadius: '12px'
+          }}
+        >
+          <Zap size={18} color="#000" />
+        </button>
       </div>
 
       <div className="add-friend-section">
@@ -340,6 +353,11 @@ export default function FriendsList() {
         <div className={`toast ${toast.type}`}>
           {toast.message}
         </div>
+      )}
+
+      {/* Quick Add Modal */}
+      {showQuickAdd && (
+        <QuickAdd onClose={() => setShowQuickAdd(false)} />
       )}
     </div>
   )
