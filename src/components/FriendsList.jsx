@@ -5,8 +5,9 @@ import {
 } from 'firebase/firestore'
 import { db } from '../firebase'
 import { useAuth } from '../App'
-import { Search, UserPlus, Check, X, Clock, Flame, Users, Zap } from 'lucide-react'
+import { Search, UserPlus, Check, X, Clock, Flame, Users, Zap, Heart } from 'lucide-react'
 import QuickAdd from './QuickAdd'
+import BestFriends from './BestFriends'
 
 export default function FriendsList() {
   const { user, userData } = useAuth()
@@ -20,6 +21,7 @@ export default function FriendsList() {
   const [streaks, setStreaks] = useState({})
   const [toast, setToast] = useState(null)
   const [showQuickAdd, setShowQuickAdd] = useState(false)
+  const [showBestFriends, setShowBestFriends] = useState(false)
 
   // Fetch friend requests
   useEffect(() => {
@@ -319,6 +321,30 @@ export default function FriendsList() {
         </div>
       )}
 
+      {/* Best Friends Button */}
+      <div 
+        className="best-friends-btn"
+        onClick={() => setShowBestFriends(true)}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          margin: '12px 16px',
+          padding: '14px 16px',
+          background: 'linear-gradient(135deg, rgba(255,59,92,0.2), rgba(255,107,53,0.2))',
+          borderRadius: '16px',
+          cursor: 'pointer',
+          border: '1px solid rgba(255,59,92,0.3)'
+        }}
+      >
+        <Heart size={24} color="#FF3B5C" />
+        <div style={{ flex: 1 }}>
+          <div style={{ color: '#fff', fontWeight: '600', fontSize: '15px' }}>Best Friends</div>
+          <div style={{ color: '#888', fontSize: '12px' }}>See your top friends & streaks</div>
+        </div>
+        <Flame size={20} color="#FF6B35" />
+      </div>
+
       <div className="friends-list">
         <div className="section-title">My Friends ({friends.length})</div>
         
@@ -358,6 +384,11 @@ export default function FriendsList() {
       {/* Quick Add Modal */}
       {showQuickAdd && (
         <QuickAdd onClose={() => setShowQuickAdd(false)} />
+      )}
+
+      {/* Best Friends Modal */}
+      {showBestFriends && (
+        <BestFriends onClose={() => setShowBestFriends(false)} />
       )}
     </div>
   )

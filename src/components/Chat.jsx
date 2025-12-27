@@ -5,7 +5,7 @@ import {
 } from 'firebase/firestore'
 import { db } from '../firebase'
 import { useAuth } from '../App'
-import { ArrowLeft, Send, Camera, Phone, Video, Mic, Square, Play } from 'lucide-react'
+import { ArrowLeft, Send, Camera, Phone, Video, Mic, Square, Play, Search, X } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 
 // Extended reactions list
@@ -77,6 +77,8 @@ function Chat({ friend, onClose, onOpenCamera, onStartCall }) {
   const [showReactions, setShowReactions] = useState(null)
   const [isTyping, setIsTyping] = useState(false)
   const [friendTyping, setFriendTyping] = useState(false)
+  const [showSearch, setShowSearch] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
   const messagesEndRef = useRef(null)
   const mediaRecorderRef = useRef(null)
   const audioChunksRef = useRef([])
@@ -277,6 +279,9 @@ function Chat({ friend, onClose, onOpenCamera, onStartCall }) {
           </div>
         </div>
         <div className="chat-header-actions">
+          <button className="header-btn" onClick={() => setShowSearch(!showSearch)}>
+            <Search size={20} />
+          </button>
           <button className="header-btn" onClick={handleVoiceCall}>
             <Phone size={20} />
           </button>
@@ -289,14 +294,52 @@ function Chat({ friend, onClose, onOpenCamera, onStartCall }) {
         </div>
       </div>
 
+      {/* Search Bar */}
+      {showSearch && (
+        <div className="chat-search-bar">
+          <Search size={18} color="#888" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search messages..."
+            autoFocus
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')}>
+              <X size={18} />
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="chat-messages">
-        {messages.length === 0 ? (
-          <div className="chat-empty">
-            <p>No messages yet</p>
-            <p>Say hi to {friend.displayName}! 👋</p>
-          </div>
-        ) : (
-          messages.map((msg) => (
+        {(() => {
+          const filteredMessages = searchQuery
+            ? messages.filter(msg => 
+                msg.text?.toLowerCase().includes(searchQuery.toLowerCase())
+              )
+            : messages
+
+          if (filteredMessages.length === 0) {
+            return (
+              <div className="chat-empty">
+                {searchQuery ? (
+                  <>
+                    <p>No messages found</p>
+                    <p>Try a different search term</p>
+                  </>
+                ) : (
+                  <>
+                    <p>No messages yet</p>
+                    <p>Say hi to {friend.displayName}! 👋</p>
+                  </>
+                )}
+              </div>
+            )
+          }
+
+          return filteredMessages.map((msg) => (
             <ChatMessage
               key={msg.id}
               msg={msg}
@@ -306,7 +349,7 @@ function Chat({ friend, onClose, onOpenCamera, onStartCall }) {
               onAddReaction={addReaction}
             />
           ))
-        )}
+        })()}
         
         {friendTyping && (
           <div className="typing-indicator">

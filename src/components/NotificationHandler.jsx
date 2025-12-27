@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react'
-import { collection, query, where, onSnapshot } from 'firebase/firestore'
+import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore'
 import { db } from '../firebase'
 import { useAuth } from '../App'
 
 export default function NotificationHandler() {
   const { user, userData } = useAuth()
-  const [permission, setPermission] = useState(Notification.permission)
+  const [permission, setPermission] = useState(
+    typeof Notification !== 'undefined' ? Notification.permission : 'denied'
+  )
+  const [streakWarnings, setStreakWarnings] = useState([])
 
   // Request notification permission on mount
   useEffect(() => {
@@ -94,6 +97,68 @@ export default function NotificationHandler() {
 
     return () => unsubscribes.forEach((unsub) => unsub())
   }, [user, userData, permission])
+
+  // Check for streak warnings every hour
+  useEffect(() => {
+    if (!user || !userData?.friends || permission !== 'granted') return
+
+    const checkStreaks = async () => {
+      const warnings = []
+      const now = new Date()
+
+      for (const friendId of userData.friends) {
+        const streakId = [user.uid, friendId].sort().join('_')
+        
+        try {
+          const streakDoc = await getDoc(doc(db, 'streaks', streakId))
+          if (!streakDoc.exists()) continue
+
+          const streakData = streakDoc.data()
+          if (streakData.count < 3) continue // Only warn for streaks 3+
+
+          const lastSnapTime = new Date(streakData.lastSnapAt)
+          const hoursSinceSnap = (now - lastSnapTime) / (1000 * 60 * 60)
+
+          // Warn if streak is about to expire (20-24 hours)
+          if (hoursSinceSnap >= 20 && hoursSinceSnap < 24) {
+            const friendDoc = await getDoc(doc(db, 'users', friendId))
+            const friendName = friendDoc.exists() ? friendDoc.data().displayName : 'A friend'
+            
+            // Only warn if we were not the last one to snap
+            if (streakData.lastSnappedBy !== user.uid) {
+              warnings.push({
+                friendId,
+                friendName,
+                streak: streakData.count,
+                hoursLeft: Math.floor(24 - hoursSinceSnap)
+              })
+            }
+          }
+        } catch (e) {
+          console.error('Streak check error:', e)
+        }
+      }
+
+      // Show notifications for expiring streaks
+      warnings.forEach(warning => {
+        showNotification(
+          `⏰ Streak about to expire!`,
+          `${warning.streak}🔥 streak with ${warning.friendName} expires in ${warning.hoursLeft}h! Send a snap now!`,
+          `streak-${warning.friendId}`
+        )
+      })
+
+      setStreakWarnings(warnings)
+    }
+
+    // Check immediately
+    checkStreaks()
+
+    // Check every hour
+    const interval = setInterval(checkStreaks, 60 * 60 * 1000)
+
+    return () => clearInterval(interval)
+  }, [user, userData?.friends, permission])
 
   const showNotification = (title, body, tag) => {
     if (permission !== 'granted') return
