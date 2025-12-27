@@ -28,6 +28,30 @@ const REACTIONS = ['❤️', '😂', '😮', '😢', '😡', '👍', '🔥', '�
 
 // Memoized message component
 const ChatMessage = memo(({ msg, isOwn, onDoubleClick, showReactions, onAddReaction }) => {
+  const reactions = REACTIONS
+  
+  return (
+    <div 
+      className={`chat-message ${isOwn ? 'sent' : 'received'}`}
+      onDoubleClick={() => onDoubleClick(msg.id)}
+    >
+      <div className="chat-bubble">
+        {msg.type === 'voice' ? (
+          <div className="voice-message">
+            <button 
+              className="voice-play-btn"
+              onClick={() => new Audio(msg.audioUrl).play()}
+            >
+              <Play size={16} />
+            </button>
+            <div className="voice-waveform">
+              {msg.waveform?.map((h, i) => (
+                <div key={i} className="voice-bar" style={{ height: `${h}%` }} />
+              )) || [...Array(12)].map((_, i) => (
+                <div key={i} className="voice-bar" style={{ height: `${20 + Math.random() * 60}%` }} />
+              ))}
+            </div>
+            <span className="voice-duration">{msg.duration}s</span>
           </div>
         ) : (
           msg.text
@@ -402,4 +426,3 @@ function Chat({ friend, onClose, onOpenCamera, onStartCall }) {
 }
 
 export default memo(Chat)
-
