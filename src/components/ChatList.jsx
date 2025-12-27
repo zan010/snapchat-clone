@@ -21,12 +21,13 @@ const triggerHaptic = async (style = ImpactStyle.Medium) => {
   } catch (e) {}
 }
 
-// ... rest of the helper functions ...
+// Best friend emojis based on interaction level
+const getBestFriendEmoji = (streak) => {
   if (streak >= 100) return '💯'
   if (streak >= 50) return '🔥'
   if (streak >= 30) return '⭐'
   if (streak >= 14) return '💛'
-  if (streak >= 7) return ''
+  if (streak >= 7) return '💕'
   return null
 }
 
