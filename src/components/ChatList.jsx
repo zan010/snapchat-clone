@@ -1,20 +1,32 @@
-import { useState, useEffect, useCallback, memo } from 'react'
+import { useState, useEffect, useCallback, useMemo, memo } from 'react'
 import { collection, query, where, onSnapshot, doc, getDoc, getDocs, orderBy, limit } from 'firebase/firestore'
 import { db } from '../firebase'
 import { useAuth } from '../App'
-import { Settings, Flame, MessageCircle, Sparkles, Send, Users, Plus } from 'lucide-react'
+import { Settings, Flame, MessageCircle, Sparkles, Send, Users, Plus, Search, X } from 'lucide-react'
 import Stories from './Stories'
 import { useNavigate } from 'react-router-dom'
 import Avatar from './Avatar'
 import StreakWidget from './StreakWidget'
+import { Haptics, ImpactStyle } from '@capacitor/haptics'
 
-// Best friend emojis based on interaction level
-const getBestFriendEmoji = (streak) => {
+const playSound = (url) => {
+  const audio = new Audio(url)
+  audio.volume = 0.4
+  audio.play().catch(e => console.log('Sound blocked'))
+}
+
+const triggerHaptic = async (style = ImpactStyle.Medium) => {
+  try {
+    await Haptics.impact({ style })
+  } catch (e) {}
+}
+
+// ... rest of the helper functions ...
   if (streak >= 100) return '💯'
   if (streak >= 50) return '🔥'
   if (streak >= 30) return '⭐'
   if (streak >= 14) return '💛'
-  if (streak >= 7) return '💕'
+  if (streak >= 7) return ''
   return null
 }
 
@@ -116,6 +128,20 @@ function ChatList({ onViewSnap, onOpenChat, onOpenSettings, onOpenGroup, onCreat
   const [conversations, setConversations] = useState([])
   const [groups, setGroups] = useState([])
   const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
+
+  const filteredConversations = useMemo(() => {
+    if (!searchQuery.trim()) return conversations
+    return conversations.filter(c => 
+      c.friend.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.friend.username?.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+  }, [conversations, searchQuery])
+
+  const filteredGroups = useMemo(() => {
+    if (!searchQuery.trim()) return groups
+    return groups.filter(g => g.name?.toLowerCase().includes(searchQuery.toLowerCase()))
+  }, [groups, searchQuery])
 
   // Fetch groups
   useEffect(() => {
@@ -276,6 +302,7 @@ function ChatList({ onViewSnap, onOpenChat, onOpenSettings, onOpenGroup, onCreat
   }, [user, fetchConversations])
 
   const handleConversationClick = useCallback((conv) => {
+    triggerHaptic(ImpactStyle.Light)
     if (conv.unreadSnaps && conv.unreadSnaps.length > 0) {
       onViewSnap(conv.unreadSnaps[0])
     } else {
@@ -284,7 +311,10 @@ function ChatList({ onViewSnap, onOpenChat, onOpenSettings, onOpenGroup, onCreat
   }, [onViewSnap, onOpenChat])
 
   // Memoized header buttons
-  const handleProfile = useCallback(() => navigate('/profile'), [navigate])
+  const handleProfile = useCallback(() => {
+    triggerHaptic(ImpactStyle.Medium)
+    navigate('/profile')
+  }, [navigate])
 
   if (loading) {
     return (
@@ -304,6 +334,25 @@ function ChatList({ onViewSnap, onOpenChat, onOpenSettings, onOpenGroup, onCreat
         </button>
       </div>
 
+      <div className="search-bar-container">
+        <div className="search-bar">
+          <Search size={16} className="search-icon" />
+          <input 
+            type="text" 
+            placeholder="Search friends and groups..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {searchQuery && (
+            <X 
+              size={16} 
+              className="clear-icon" 
+              onClick={() => setSearchQuery('')} 
+            />
+          )}
+        </div>
+      </div>
+
       {/* Stories */}
       <Stories onCaptureStory={onAddStory} />
 
@@ -311,24 +360,30 @@ function ChatList({ onViewSnap, onOpenChat, onOpenSettings, onOpenGroup, onCreat
       <StreakWidget onOpenCamera={onOpenCamera} />
 
       {/* Groups Section */}
-      {groups.length > 0 && (
+      {filteredGroups.length > 0 && (
         <div className="friends-list" style={{ marginBottom: 0, paddingBottom: 0 }}>
           <div className="section-header" style={{ marginBottom: '8px' }}>
             <Users size={16} />
             <span>Groups</span>
             <button 
               className="create-group-btn"
-              onClick={onCreateGroup}
+              onClick={() => {
+                triggerHaptic(ImpactStyle.Medium)
+                onCreateGroup()
+              }}
               style={{ marginLeft: 'auto' }}
             >
               <Plus size={16} />
             </button>
           </div>
-          {groups.map((group) => (
+          {filteredGroups.map((group) => (
             <div 
               key={group.id}
               className="friend-item group-item"
-              onClick={() => onOpenGroup(group)}
+              onClick={() => {
+                triggerHaptic(ImpactStyle.Light)
+                onOpenGroup(group)
+              }}
             >
               <div className="group-avatar-icon">
                 {group.emoji || '👥'}
@@ -347,19 +402,19 @@ function ChatList({ onViewSnap, onOpenChat, onOpenSettings, onOpenGroup, onCreat
         </div>
       )}
 
-      {conversations.length === 0 && groups.length === 0 ? (
+      {filteredConversations.length === 0 && filteredGroups.length === 0 ? (
         <div className="empty-state">
           <MessageCircle size={64} />
-          <h3>No friends yet</h3>
-          <p>Add friends to start chatting and snapping!</p>
+          <h3>{searchQuery ? 'No results found' : 'No friends yet'}</h3>
+          <p>{searchQuery ? 'Try a different search term' : 'Add friends to start chatting and snapping!'}</p>
         </div>
-      ) : conversations.length > 0 && (
+      ) : filteredConversations.length > 0 && (
         <div className="friends-list">
           <div className="section-header">
             <Sparkles size={16} />
             <span>Chats</span>
           </div>
-          {conversations.map((conv) => (
+          {filteredConversations.map((conv) => (
             <ConversationItem 
               key={conv.friend.id}
               conv={conv}

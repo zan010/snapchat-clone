@@ -4,6 +4,22 @@ import { db } from '../firebase'
 import { useAuth } from '../App'
 import { X, RotateCcw, Send, Image, Check, Flame, Sparkles } from 'lucide-react'
 import CameraFilters, { filters, stickers } from './CameraFilters'
+import { Haptics, ImpactStyle } from '@capacitor/haptics'
+
+const triggerHaptic = async (style = ImpactStyle.Medium) => {
+  try { await Haptics.impact({ style }) } catch (e) {}
+}
+
+const playSound = (url) => {
+  const audio = new Audio(url)
+  audio.volume = 0.4
+  audio.play().catch(e => {})
+}
+
+const SOUNDS = {
+  SHUTTER: 'https://assets.mixkit.co/active_storage/sfx/702/702-preview.mp3',
+  SENT: 'https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3'
+}
 
 export default function Camera({ onClose, preselectedFriend = null }) {
   const { user, userData } = useAuth()
@@ -261,6 +277,9 @@ export default function Camera({ onClose, preselectedFriend = null }) {
 
   const capturePhoto = () => {
     if (!videoRef.current || !canvasRef.current) return
+    
+    playSound(SOUNDS.SHUTTER)
+    triggerHaptic(ImpactStyle.Heavy)
 
     const video = videoRef.current
     const canvas = canvasRef.current
@@ -332,6 +351,8 @@ export default function Camera({ onClose, preselectedFriend = null }) {
   const sendSnap = async () => {
     if (selectedFriends.length === 0 || (!capturedImage && !capturedVideo)) return
     setSending(true)
+    
+    triggerHaptic(ImpactStyle.Medium)
 
     try {
       let mediaUrl = ''
@@ -423,6 +444,7 @@ export default function Camera({ onClose, preselectedFriend = null }) {
       }
 
       showToast(`Sent to ${selectedFriends.length} friend${selectedFriends.length > 1 ? 's' : ''}!`, 'success')
+      playSound(SOUNDS.SENT)
       
       setTimeout(() => {
         onClose()

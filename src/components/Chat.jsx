@@ -7,12 +7,23 @@ import { db } from '../firebase'
 import { useAuth } from '../App'
 import { ArrowLeft, Send, Camera, Phone, Video, Mic, Square, Play, Search, X } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
+import { Haptics, ImpactStyle } from '@capacitor/haptics'
 
-// Extended reactions list
-const REACTIONS = ['❤️', '😂', '😮', '😢', '😡', '👍', '🔥', '💯', '🙏', '💀', '👀', '🎉']
+const triggerHaptic = async (style = ImpactStyle.Medium) => {
+  try { await Haptics.impact({ style }) } catch (e) {}
+}
 
-// Memoized message component
-const ChatMessage = memo(({ msg, isOwn, onDoubleClick, showReactions, onAddReaction }) => {
+const playSound = (url) => {
+  const audio = new Audio(url)
+  audio.volume = 0.4
+  audio.play().catch(e => {})
+}
+
+const SOUNDS = {
+  SENT: 'https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3'
+}
+
+// ... rest of helper constants ...
   const reactions = REACTIONS
   
   return (
@@ -129,6 +140,10 @@ function Chat({ friend, onClose, onOpenCamera, onStartCall }) {
   const sendMessage = useCallback(async () => {
     if (!newMessage.trim() || sending) return
     const messageText = newMessage.trim()
+    
+    triggerHaptic(ImpactStyle.Light)
+    playSound(SOUNDS.SENT)
+    
     setNewMessage('') // Clear immediately for responsiveness
     setSending(true)
 
@@ -175,6 +190,7 @@ function Chat({ friend, onClose, onOpenCamera, onStartCall }) {
 
   // Voice message recording
   const startVoiceRecording = async () => {
+    triggerHaptic(ImpactStyle.Medium)
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       const mediaRecorder = new MediaRecorder(stream)
@@ -211,6 +227,7 @@ function Chat({ friend, onClose, onOpenCamera, onStartCall }) {
 
   const stopVoiceRecording = () => {
     if (mediaRecorderRef.current && isRecordingVoice) {
+      triggerHaptic(ImpactStyle.Light)
       clearInterval(mediaRecorderRef.current.intervalId)
       mediaRecorderRef.current.stop()
       setIsRecordingVoice(false)

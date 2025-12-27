@@ -19,6 +19,11 @@ import CreateGroup from './CreateGroup'
 import SnapMap from './SnapMap'
 import Spotlight from './Spotlight'
 import QuickAdd from './QuickAdd'
+import { Haptics, ImpactStyle } from '@capacitor/haptics'
+
+const triggerHaptic = async (style = ImpactStyle.Light) => {
+  try { await Haptics.impact({ style }) } catch (e) {}
+}
 
 export default function MainLayout() {
   const { user } = useAuth()
@@ -132,7 +137,10 @@ export default function MainLayout() {
       <nav className="bottom-nav">
         <button 
           className={`nav-btn ${currentTab === 'chat' ? 'active' : ''}`}
-          onClick={() => navigate('/')}
+          onClick={() => {
+            triggerHaptic()
+            navigate('/')
+          }}
         >
           <MessageCircle />
           <span>Chat</span>
@@ -140,7 +148,10 @@ export default function MainLayout() {
         
         <button 
           className="nav-btn"
-          onClick={() => setShowMap(true)}
+          onClick={() => {
+            triggerHaptic()
+            setShowMap(true)
+          }}
         >
           <Map />
           <span>Map</span>
@@ -148,14 +159,20 @@ export default function MainLayout() {
         
         <button 
           className="nav-btn-camera"
-          onClick={() => handleOpenCamera()}
+          onClick={() => {
+            triggerHaptic(ImpactStyle.Medium)
+            handleOpenCamera()
+          }}
         >
           <Camera />
         </button>
         
         <button 
           className={`nav-btn ${currentTab === 'friends' ? 'active' : ''}`}
-          onClick={() => navigate('/friends')}
+          onClick={() => {
+            triggerHaptic()
+            navigate('/friends')
+          }}
         >
           <Users />
           <span>Friends</span>
@@ -163,7 +180,10 @@ export default function MainLayout() {
         
         <button 
           className="nav-btn"
-          onClick={() => setShowSpotlight(true)}
+          onClick={() => {
+            triggerHaptic()
+            setShowSpotlight(true)
+          }}
         >
           <Sparkles />
           <span>Spotlight</span>
