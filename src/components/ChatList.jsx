@@ -144,7 +144,14 @@ function ChatList({ onViewSnap, onOpenChat, onOpenSettings, onOpenGroup, onCreat
 
   // Optimized data fetching with parallel requests
   const fetchConversations = useCallback(async () => {
-    if (!user || !userData?.friends?.length) {
+    if (!user) {
+      setConversations([])
+      setLoading(false)
+      return
+    }
+
+    // If no friends yet, show empty but don't error
+    if (!userData?.friends?.length) {
       setConversations([])
       setLoading(false)
       return
@@ -153,44 +160,70 @@ function ChatList({ onViewSnap, onOpenChat, onOpenSettings, onOpenGroup, onCreat
     try {
       // Fetch all data in parallel for each friend
       const promises = userData.friends.map(async (friendId) => {
-        const [friendDoc, chatDoc, streakDoc, receivedSnapsSnapshot, sentSnapsSnapshot] = await Promise.all([
-          getDoc(doc(db, 'users', friendId)),
-          getDoc(doc(db, 'chats', [user.uid, friendId].sort().join('_'))),
-          getDoc(doc(db, 'streaks', [user.uid, friendId].sort().join('_'))),
-          // Received snaps (unread)
-          getDocs(query(
-            collection(db, 'snaps'),
-            where('recipientId', '==', user.uid),
-            where('senderId', '==', friendId),
-            where('viewed', '==', false)
-          )),
-          // Sent snaps (to show status)
-          getDocs(query(
-            collection(db, 'snaps'),
-            where('senderId', '==', user.uid),
-            where('recipientId', '==', friendId),
-            orderBy('createdAt', 'desc'),
-            limit(1)
-          ))
-        ])
+        try {
+          const [friendDoc, chatDoc, streakDoc] = await Promise.all([
+            getDoc(doc(db, 'users', friendId)),
+            getDoc(doc(db, 'chats', [user.uid, friendId].sort().join('_'))),
+            getDoc(doc(db, 'streaks', [user.uid, friendId].sort().join('_')))
+          ])
 
-        if (!friendDoc.exists()) return null
+          if (!friendDoc.exists()) return null
 
-        return {
-          odId: friendId,
-          friend: { id: friendDoc.id, ...friendDoc.data() },
-          chat: chatDoc.exists() ? chatDoc.data() : null,
-          streak: streakDoc.exists() ? streakDoc.data().count : 0,
-          unreadSnaps: receivedSnapsSnapshot.docs.map(d => ({ id: d.id, ...d.data() })),
-          sentSnaps: sentSnapsSnapshot.docs.map(d => ({ id: d.id, ...d.data() }))
+          // Fetch snaps separately to avoid index issues
+          let unreadSnaps = []
+          let sentSnaps = []
+          
+          try {
+            const receivedSnapsSnapshot = await getDocs(query(
+              collection(db, 'snaps'),
+              where('recipientId', '==', user.uid),
+              where('senderId', '==', friendId),
+              where('viewed', '==', false)
+            ))
+            unreadSnaps = receivedSnapsSnapshot.docs.map(d => ({ id: d.id, ...d.data() }))
+          } catch (e) {
+            console.log('Skipping unread snaps query')
+          }
+
+          try {
+            const sentSnapsSnapshot = await getDocs(query(
+              collection(db, 'snaps'),
+              where('senderId', '==', user.uid),
+              where('recipientId', '==', friendId)
+            ))
+            // Get most recent sent snap
+            const sorted = sentSnapsSnapshot.docs
+              .map(d => ({ id: d.id, ...d.data() }))
+              .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+            sentSnaps = sorted.slice(0, 1)
+          } catch (e) {
+            console.log('Skipping sent snaps query')
+          }
+
+          return {
+            odId: friendId,
+            friend: { id: friendDoc.id, ...friendDoc.data() },
+            chat: chatDoc.exists() ? chatDoc.data() : null,
+            streak: streakDoc.exists() ? streakDoc.data().count : 0,
+            unreadSnaps,
+            sentSnaps
+          }
+        } catch (err) {
+          console.error('Error fetching friend data:', friendId, err)
+          return null
         }
       })
 
       const results = await Promise.all(promises)
       const convos = results.filter(Boolean)
 
-      // Sort by last activity
+      // Sort: friends with unread snaps first, then by last activity
       convos.sort((a, b) => {
+        // Unread snaps come first
+        if (a.unreadSnaps?.length && !b.unreadSnaps?.length) return -1
+        if (!a.unreadSnaps?.length && b.unreadSnaps?.length) return 1
+        
+        // Then by last activity
         const aTime = a.chat?.lastMessageAt || a.sentSnaps?.[0]?.createdAt || '1970-01-01'
         const bTime = b.chat?.lastMessageAt || b.sentSnaps?.[0]?.createdAt || '1970-01-01'
         return new Date(bTime) - new Date(aTime)
@@ -204,9 +237,12 @@ function ChatList({ onViewSnap, onOpenChat, onOpenSettings, onOpenGroup, onCreat
     }
   }, [user, userData?.friends])
 
+  // Refetch when friends list changes
   useEffect(() => {
     fetchConversations()
+  }, [userData?.friends?.length, fetchConversations])
 
+  useEffect(() => {
     if (!user) return
 
     // Debounced listener for snap updates (both sent and received)
