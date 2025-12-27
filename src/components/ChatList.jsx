@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback, memo } from 'react'
 import { collection, query, where, onSnapshot, doc, getDoc, getDocs, orderBy, limit } from 'firebase/firestore'
 import { db } from '../firebase'
 import { useAuth } from '../App'
-import { Settings, Flame, MessageCircle, Palette, Sparkles, Send, Users, Plus } from 'lucide-react'
+import { Settings, Flame, MessageCircle, Sparkles, Send, Users, Plus } from 'lucide-react'
+import Stories from './Stories'
 import { useNavigate } from 'react-router-dom'
 import Avatar from './Avatar'
 import StreakWidget from './StreakWidget'
@@ -260,14 +261,15 @@ function ChatList({ onViewSnap, onOpenChat, onOpenSettings, onOpenGroup, onCreat
   return (
     <div className="chat-list">
       <div className="header">
+        <div style={{ width: 40 }} />
+        <h1 className="header-title">SnapClone</h1>
         <button className="header-btn" onClick={handleProfile}>
           <Settings size={20} />
         </button>
-        <h1 className="header-title">SnapClone</h1>
-        <button className="header-btn" onClick={onOpenSettings}>
-          <Palette size={20} />
-        </button>
       </div>
+
+      {/* Stories */}
+      <Stories onCaptureStory={onAddStory} />
 
       {/* Streak Widget */}
       <StreakWidget onOpenCamera={onOpenCamera} />

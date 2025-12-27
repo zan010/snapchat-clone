@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore'
 import { db } from '../firebase'
 import { useAuth } from '../App'
@@ -93,7 +94,7 @@ export default function BestFriends({ onClose }) {
     return null
   }
 
-  return (
+  return createPortal(
     <div className="best-friends-screen">
       <div className="header">
         <button className="header-btn" onClick={onClose}>
@@ -336,7 +337,8 @@ export default function BestFriends({ onClose }) {
           font-size: 16px;
         }
       `}</style>
-    </div>
+    </div>,
+    document.body
   )
 }
 

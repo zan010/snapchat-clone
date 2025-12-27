@@ -14,7 +14,6 @@ import NotificationHandler from './NotificationHandler'
 import Settings from './Settings'
 import VideoCall from './VideoCall'
 import InstallBanner from './InstallBanner'
-import Stories from './Stories'
 import GroupChat from './GroupChat'
 import CreateGroup from './CreateGroup'
 import SnapMap from './SnapMap'
@@ -112,24 +111,18 @@ export default function MainLayout() {
       <div className="content">
         <Routes>
           <Route path="/" element={
-            <>
-              <Stories onCaptureStory={() => {
+            <ChatList 
+              onViewSnap={setViewingSnap} 
+              onOpenChat={setActiveChat}
+              onOpenSettings={() => setShowSettings(true)}
+              onOpenGroup={setActiveGroup}
+              onCreateGroup={() => setShowCreateGroup(true)}
+              onAddStory={() => {
                 setCameraRecipient('story')
                 setShowCamera(true)
-              }} />
-              <ChatList 
-                onViewSnap={setViewingSnap} 
-                onOpenChat={setActiveChat}
-                onOpenSettings={() => setShowSettings(true)}
-                onOpenGroup={setActiveGroup}
-                onCreateGroup={() => setShowCreateGroup(true)}
-                onAddStory={() => {
-                  setCameraRecipient('story')
-                  setShowCamera(true)
-                }}
-                onOpenCamera={handleOpenCamera}
-              />
-            </>
+              }}
+              onOpenCamera={handleOpenCamera}
+            />
           } />
           <Route path="/friends" element={<FriendsList />} />
           <Route path="/profile" element={<Profile />} />

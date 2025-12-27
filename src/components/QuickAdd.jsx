@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { collection, getDocs, query, where, limit, doc, getDoc, addDoc } from 'firebase/firestore'
 import { db } from '../firebase'
 import { useAuth } from '../App'
@@ -100,7 +101,7 @@ export default function QuickAdd({ onClose }) {
     setSuggestions(prev => prev.filter(s => s.id !== userId))
   }
 
-  return (
+  return createPortal(
     <div className="quick-add-screen">
       <div className="header">
         <button className="header-btn" onClick={onClose}>
@@ -293,7 +294,8 @@ export default function QuickAdd({ onClose }) {
           to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
-    </div>
+    </div>,
+    document.body
   )
 }
 

@@ -1,18 +1,71 @@
-import { useState, useEffect } from 'react'
-import { doc, updateDoc, onSnapshot, collection, query, where, getDoc } from 'firebase/firestore'
+import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
+import { doc, updateDoc, onSnapshot, getDoc, setDoc } from 'firebase/firestore'
 import { db } from '../firebase'
 import { useAuth } from '../App'
 import Avatar from './Avatar'
-import { ArrowLeft, MapPin, Eye, EyeOff, Navigation, RefreshCw } from 'lucide-react'
+import { ArrowLeft, MapPin, Eye, EyeOff, Navigation, RefreshCw, Locate } from 'lucide-react'
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
+
+// Fix for default marker icons in Leaflet with bundlers
+delete L.Icon.Default.prototype._getIconUrl
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+})
+
+// Custom marker icon creator
+const createCustomIcon = (color, isMe = false) => {
+  return L.divIcon({
+    className: 'custom-marker',
+    html: `
+      <div style="
+        width: ${isMe ? '48px' : '40px'};
+        height: ${isMe ? '48px' : '40px'};
+        border-radius: 50%;
+        background: ${color};
+        border: 3px solid ${isMe ? '#FFFC00' : '#fff'};
+        box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        color: #000;
+        font-size: ${isMe ? '18px' : '14px'};
+        ${isMe ? 'animation: pulse-marker 2s infinite;' : ''}
+      ">
+        ${isMe ? '📍' : '👤'}
+      </div>
+    `,
+    iconSize: [isMe ? 48 : 40, isMe ? 48 : 40],
+    iconAnchor: [isMe ? 24 : 20, isMe ? 24 : 20],
+  })
+}
+
+// Component to recenter map
+function RecenterMap({ position }) {
+  const map = useMap()
+  useEffect(() => {
+    if (position) {
+      map.flyTo(position, 15, { duration: 1 })
+    }
+  }, [position, map])
+  return null
+}
 
 export default function SnapMap({ onClose }) {
   const { user, userData } = useAuth()
   const [friendLocations, setFriendLocations] = useState([])
   const [myLocation, setMyLocation] = useState(null)
+  const [mapCenter, setMapCenter] = useState([51.505, -0.09]) // Default to London
   const [loading, setLoading] = useState(true)
   const [ghostMode, setGhostMode] = useState(userData?.ghostMode || false)
   const [friends, setFriends] = useState({})
   const [error, setError] = useState(null)
+  const [shouldRecenter, setShouldRecenter] = useState(null)
 
   // Fetch friends data
   useEffect(() => {
@@ -63,6 +116,7 @@ export default function SnapMap({ onClose }) {
       return
     }
 
+    setError(null)
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const location = {
@@ -72,14 +126,12 @@ export default function SnapMap({ onClose }) {
           ghostMode: ghostMode
         }
         setMyLocation(location)
+        setMapCenter([location.lat, location.lng])
+        setShouldRecenter([location.lat, location.lng])
 
         // Save to database
         try {
-          await updateDoc(doc(db, 'locations', user.uid), location).catch(async () => {
-            // If document doesn't exist, create it
-            const { setDoc } = await import('firebase/firestore')
-            await setDoc(doc(db, 'locations', user.uid), location)
-          })
+          await setDoc(doc(db, 'locations', user.uid), location, { merge: true })
         } catch (e) {
           console.error('Error updating location:', e)
         }
@@ -88,7 +140,7 @@ export default function SnapMap({ onClose }) {
         console.error('Error getting location:', error)
         setError('Could not get your location. Please enable location services.')
       },
-      { enableHighAccuracy: true }
+      { enableHighAccuracy: true, timeout: 10000 }
     )
   }
 
@@ -102,7 +154,9 @@ export default function SnapMap({ onClose }) {
     
     try {
       await updateDoc(doc(db, 'users', user.uid), { ghostMode: newGhostMode })
-      await updateDoc(doc(db, 'locations', user.uid), { ghostMode: newGhostMode })
+      if (myLocation) {
+        await setDoc(doc(db, 'locations', user.uid), { ...myLocation, ghostMode: newGhostMode }, { merge: true })
+      }
     } catch (e) {
       console.error('Error toggling ghost mode:', e)
     }
@@ -121,7 +175,10 @@ export default function SnapMap({ onClose }) {
     return 'Yesterday'
   }
 
-  return (
+  const myIcon = createCustomIcon('#FFFC00', true)
+  const friendIcon = createCustomIcon('#4ECDC4', false)
+
+  return createPortal(
     <div className="snap-map">
       <div className="header">
         <button className="header-btn" onClick={onClose}>
@@ -154,66 +211,70 @@ export default function SnapMap({ onClose }) {
         </div>
       </div>
 
-      {/* Map Placeholder */}
+      {/* Real Map */}
       <div className="map-container">
-        <div className="map-placeholder">
-          <div className="map-grid">
-            {/* Create a grid pattern */}
-            {Array(12).fill(0).map((_, i) => (
-              <div key={i} className="map-cell" />
-            ))}
-          </div>
+        <MapContainer
+          center={mapCenter}
+          zoom={13}
+          style={{ width: '100%', height: '100%' }}
+          zoomControl={false}
+        >
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
           
-          {/* My Location */}
+          {shouldRecenter && <RecenterMap position={shouldRecenter} />}
+          
+          {/* My Location Marker */}
           {myLocation && !ghostMode && (
-            <div 
-              className="map-marker my-marker"
-              style={{ left: '50%', top: '50%' }}
+            <Marker 
+              position={[myLocation.lat, myLocation.lng]} 
+              icon={myIcon}
             >
-              <div className="marker-pulse" />
-              <Avatar 
-                avatar={userData?.avatar} 
-                name={userData?.displayName} 
-                size={40}
-              />
-              <span className="marker-label">You</span>
-            </div>
+              <Popup>
+                <div style={{ textAlign: 'center', padding: '4px' }}>
+                  <strong>📍 You are here</strong>
+                  <br />
+                  <small>Last updated: Just now</small>
+                </div>
+              </Popup>
+            </Marker>
           )}
 
-          {/* Friend Locations */}
-          {friendLocations.map((loc, index) => {
+          {/* Friend Location Markers */}
+          {friendLocations.map(loc => {
             const friend = friends[loc.id]
             if (!friend) return null
             
-            // Pseudo-random position for visualization
-            const seed = loc.id.charCodeAt(0) + loc.id.charCodeAt(1)
-            const left = 20 + (seed % 60)
-            const top = 20 + ((seed * 7) % 60)
-            
             return (
-              <div 
+              <Marker 
                 key={loc.id}
-                className="map-marker friend-marker"
-                style={{ left: `${left}%`, top: `${top}%` }}
+                position={[loc.lat, loc.lng]} 
+                icon={friendIcon}
               >
-                <Avatar 
-                  avatar={friend.avatar} 
-                  name={friend.displayName} 
-                  size={36}
-                />
-                <div className="marker-info">
-                  <span className="marker-name">{friend.displayName}</span>
-                  <span className="marker-time">{formatTime(loc.updatedAt)}</span>
-                </div>
-              </div>
+                <Popup>
+                  <div style={{ textAlign: 'center', padding: '4px' }}>
+                    <strong>{friend.displayName}</strong>
+                    <br />
+                    <small>{formatTime(loc.updatedAt)}</small>
+                  </div>
+                </Popup>
+              </Marker>
             )
           })}
+        </MapContainer>
 
-          {/* Center marker */}
-          <div className="map-center">
-            <Navigation size={24} />
-          </div>
-        </div>
+        {/* Center on me button */}
+        <button className="center-btn" onClick={() => {
+          if (myLocation) {
+            setShouldRecenter([myLocation.lat, myLocation.lng])
+          } else {
+            updateMyLocation()
+          }
+        }}>
+          <Locate size={22} />
+        </button>
       </div>
 
       {/* Friends List */}
@@ -228,7 +289,11 @@ export default function SnapMap({ onClose }) {
               if (!friend) return null
               
               return (
-                <div key={loc.id} className="map-friend-item">
+                <div 
+                  key={loc.id} 
+                  className="map-friend-item"
+                  onClick={() => setShouldRecenter([loc.lat, loc.lng])}
+                >
                   <Avatar 
                     avatar={friend.avatar} 
                     name={friend.displayName} 
@@ -255,9 +320,12 @@ export default function SnapMap({ onClose }) {
       <style>{`
         .snap-map {
           position: fixed;
-          inset: 0;
-          background: var(--bg-primary);
-          z-index: 100;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: #000;
+          z-index: 9999;
           display: flex;
           flex-direction: column;
           overflow: hidden;
@@ -324,92 +392,52 @@ export default function SnapMap({ onClose }) {
           overflow: hidden;
         }
 
-        .map-placeholder {
-          width: 100%;
-          height: 100%;
-          background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-          position: relative;
+        .leaflet-container {
+          background: #1a1a2e;
         }
 
-        .map-grid {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          grid-template-rows: repeat(3, 1fr);
-          width: 100%;
-          height: 100%;
-          opacity: 0.1;
-        }
-
-        .map-cell {
-          border: 1px solid rgba(255, 252, 0, 0.3);
-        }
-
-        .map-marker {
+        .center-btn {
           position: absolute;
-          transform: translate(-50%, -50%);
-          z-index: 10;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 4px;
-        }
-
-        .my-marker {
-          z-index: 20;
-        }
-
-        .marker-pulse {
-          position: absolute;
-          width: 60px;
-          height: 60px;
+          bottom: 20px;
+          right: 16px;
+          z-index: 1000;
+          width: 48px;
+          height: 48px;
           border-radius: 50%;
-          background: rgba(255, 252, 0, 0.3);
-          animation: pulse 2s ease-out infinite;
-        }
-
-        .marker-label {
-          background: var(--accent);
+          background: #FFFC00;
+          border: none;
           color: #000;
-          padding: 2px 8px;
-          border-radius: 10px;
-          font-size: 11px;
-          font-weight: 600;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+          cursor: pointer;
         }
 
-        .marker-info {
-          background: rgba(0, 0, 0, 0.8);
-          padding: 4px 8px;
-          border-radius: 8px;
-          text-align: center;
+        .center-btn:active {
+          transform: scale(0.95);
         }
 
-        .marker-name {
-          display: block;
-          font-size: 12px;
-          font-weight: 600;
-          color: #fff;
+        .custom-marker {
+          background: transparent !important;
+          border: none !important;
         }
 
-        .marker-time {
-          font-size: 10px;
-          color: #888;
-        }
-
-        .map-center {
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          color: rgba(255, 252, 0, 0.3);
-          pointer-events: none;
+        @keyframes pulse-marker {
+          0%, 100% {
+            box-shadow: 0 0 0 0 rgba(255, 252, 0, 0.4);
+          }
+          50% {
+            box-shadow: 0 0 0 15px rgba(255, 252, 0, 0);
+          }
         }
 
         .map-friends {
-          background: var(--bg-secondary);
+          background: #1a1a1a;
           border-top-left-radius: 24px;
           border-top-right-radius: 24px;
           padding: 20px;
-          max-height: 200px;
+          max-height: 180px;
           overflow-y: auto;
         }
 
@@ -438,6 +466,12 @@ export default function SnapMap({ onClose }) {
           padding: 10px;
           background: rgba(255, 255, 255, 0.05);
           border-radius: 12px;
+          cursor: pointer;
+          transition: background 0.2s;
+        }
+
+        .map-friend-item:active {
+          background: rgba(255, 255, 255, 0.1);
         }
 
         .map-friend-item .friend-info {
@@ -457,32 +491,38 @@ export default function SnapMap({ onClose }) {
 
         .map-error {
           position: absolute;
-          bottom: 220px;
+          bottom: 200px;
           left: 16px;
           right: 16px;
           background: rgba(255, 59, 48, 0.9);
           padding: 12px;
           border-radius: 12px;
           text-align: center;
+          z-index: 1001;
         }
 
         .map-error p {
           color: #fff;
           font-size: 14px;
+          margin: 0;
         }
 
-        @keyframes pulse {
-          0% {
-            transform: scale(1);
-            opacity: 0.6;
-          }
-          100% {
-            transform: scale(2);
-            opacity: 0;
-          }
+        /* Leaflet popup styling */
+        .leaflet-popup-content-wrapper {
+          background: #1a1a1a;
+          color: #fff;
+          border-radius: 12px;
+        }
+
+        .leaflet-popup-tip {
+          background: #1a1a1a;
+        }
+
+        .leaflet-popup-content {
+          margin: 8px 12px;
         }
       `}</style>
-    </div>
+    </div>,
+    document.body
   )
 }
-
