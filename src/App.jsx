@@ -1,14 +1,12 @@
-import { useState, useEffect, createContext, useContext, lazy, Suspense, memo } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { useState, useEffect, createContext, useContext } from 'react'
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { onAuthStateChanged } from 'firebase/auth'
 import { doc, onSnapshot } from 'firebase/firestore'
 import { auth, db } from './firebase'
 import { ThemeProvider } from './context/ThemeContext'
-
-// Lazy load components for better performance
-const Login = lazy(() => import('./components/Login'))
-const Signup = lazy(() => import('./components/Signup'))
-const MainLayout = lazy(() => import('./components/MainLayout'))
+import Login from './components/Login'
+import Signup from './components/Signup'
+import MainLayout from './components/MainLayout'
 
 // Loading spinner component
 const LoadingSpinner = () => (
@@ -95,33 +93,31 @@ function PublicRoute({ children }) {
 
 function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <ThemeProvider>
         <AuthProvider>
           <div className="app">
-            <Suspense fallback={<LoadingSpinner />}>
-              <Routes>
-                <Route path="/login" element={
-                  <PublicRoute>
-                    <Login />
-                  </PublicRoute>
-                } />
-                <Route path="/signup" element={
-                  <PublicRoute>
-                    <Signup />
-                  </PublicRoute>
-                } />
-                <Route path="/*" element={
-                  <PrivateRoute>
-                    <MainLayout />
-                  </PrivateRoute>
-                } />
-              </Routes>
-            </Suspense>
+            <Routes>
+              <Route path="/login" element={
+                <PublicRoute>
+                  <Login />
+                </PublicRoute>
+              } />
+              <Route path="/signup" element={
+                <PublicRoute>
+                  <Signup />
+                </PublicRoute>
+              } />
+              <Route path="/*" element={
+                <PrivateRoute>
+                  <MainLayout />
+                </PrivateRoute>
+              } />
+            </Routes>
           </div>
         </AuthProvider>
       </ThemeProvider>
-    </BrowserRouter>
+    </HashRouter>
   )
 }
 
