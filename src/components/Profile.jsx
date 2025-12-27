@@ -3,11 +3,12 @@ import { signOut } from 'firebase/auth'
 import { auth } from '../firebase'
 import { useAuth } from '../App'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, User, Mail, Calendar, Award, Copy, Check, Download, Share2, Bell, Image, Palette, ChevronRight } from 'lucide-react'
+import { ArrowLeft, User, Mail, Calendar, Award, Copy, Check, Download, Share2, Bell, Image, Palette, ChevronRight, Trophy } from 'lucide-react'
 import { format } from 'date-fns'
 import Avatar from './Avatar'
 import AvatarCreator from './AvatarCreator'
 import Memories from './Memories'
+import Badges from './Badges'
 
 export default function Profile() {
   const { userData } = useAuth()
@@ -18,6 +19,7 @@ export default function Profile() {
   const [isInstalled, setIsInstalled] = useState(false)
   const [showAvatarCreator, setShowAvatarCreator] = useState(false)
   const [showMemories, setShowMemories] = useState(false)
+  const [showBadges, setShowBadges] = useState(false)
   const [notifPermission, setNotifPermission] = useState(
     'Notification' in window ? Notification.permission : 'denied'
   )
@@ -185,9 +187,17 @@ export default function Profile() {
           
           <button className="profile-action-btn" onClick={() => navigate('/settings')}>
             <div className="action-icon" style={{ background: 'linear-gradient(135deg, #11998e, #38ef7d)' }}>
-              <Award size={20} color="#fff" />
+              <Palette size={20} color="#fff" />
             </div>
             <span>Themes</span>
+            <ChevronRight size={16} color="#666" />
+          </button>
+          
+          <button className="profile-action-btn" onClick={() => setShowBadges(true)}>
+            <div className="action-icon" style={{ background: 'linear-gradient(135deg, #FFD700, #FFA500)' }}>
+              <Trophy size={20} color="#fff" />
+            </div>
+            <span>Badges & Achievements</span>
             <ChevronRight size={16} color="#666" />
           </button>
         </div>
@@ -349,6 +359,11 @@ export default function Profile() {
       {/* Memories Modal */}
       {showMemories && (
         <Memories onClose={() => setShowMemories(false)} />
+      )}
+
+      {/* Badges Modal */}
+      {showBadges && (
+        <Badges onClose={() => setShowBadges(false)} />
       )}
 
       <style>{`

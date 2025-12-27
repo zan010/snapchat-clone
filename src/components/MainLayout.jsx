@@ -127,6 +127,7 @@ export default function MainLayout() {
                   setCameraRecipient('story')
                   setShowCamera(true)
                 }}
+                onOpenCamera={handleOpenCamera}
               />
             </>
           } />

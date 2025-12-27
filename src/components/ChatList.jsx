@@ -5,6 +5,7 @@ import { useAuth } from '../App'
 import { Settings, Flame, MessageCircle, Palette, Sparkles, Send, Users, Plus } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import Avatar from './Avatar'
+import StreakWidget from './StreakWidget'
 
 // Best friend emojis based on interaction level
 const getBestFriendEmoji = (streak) => {
@@ -108,7 +109,7 @@ const ConversationItem = memo(({ conv, onConversationClick, currentUserId }) => 
   )
 })
 
-function ChatList({ onViewSnap, onOpenChat, onOpenSettings, onOpenGroup, onCreateGroup, onAddStory }) {
+function ChatList({ onViewSnap, onOpenChat, onOpenSettings, onOpenGroup, onCreateGroup, onAddStory, onOpenCamera }) {
   const { user, userData } = useAuth()
   const navigate = useNavigate()
   const [conversations, setConversations] = useState([])
@@ -267,6 +268,9 @@ function ChatList({ onViewSnap, onOpenChat, onOpenSettings, onOpenGroup, onCreat
           <Palette size={20} />
         </button>
       </div>
+
+      {/* Streak Widget */}
+      <StreakWidget onOpenCamera={onOpenCamera} />
 
       {/* Groups Section */}
       {groups.length > 0 && (
