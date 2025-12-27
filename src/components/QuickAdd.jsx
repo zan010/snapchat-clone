@@ -177,9 +177,12 @@ export default function QuickAdd({ onClose }) {
       <style>{`
         .quick-add-screen {
           position: fixed;
-          inset: 0;
-          background: var(--bg-primary);
-          z-index: 100;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: #000;
+          z-index: 9999;
           display: flex;
           flex-direction: column;
         }
