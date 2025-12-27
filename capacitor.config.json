@@ -3,17 +3,21 @@
   "appName": "SnapClone",
   "webDir": "dist",
   "server": {
-    "androidScheme": "https"
+    "androidScheme": "https",
+    "cleartext": true
   },
   "android": {
     "allowMixedContent": true,
-    "backgroundColor": "#000000"
+    "backgroundColor": "#000000",
+    "webContentsDebuggingEnabled": true
   },
   "plugins": {
     "SplashScreen": {
-      "launchShowDuration": 2000,
+      "launchShowDuration": 0,
+      "launchAutoHide": true,
       "backgroundColor": "#000000",
-      "showSpinner": false
+      "showSpinner": false,
+      "androidScaleType": "CENTER_CROP"
     }
   }
 }
