@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Vercel
+.vercel
+
+# Android generated files
+android/app/build/
+android/.gradle/
+android/build/
+android/local.properties
+*.iml
+
+# iOS (if added later)
+ios/App/Pods/
+ios/App/build/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local

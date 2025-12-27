@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    
+    <!-- iOS PWA support -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="SnapClone" />
+    <link rel="apple-touch-icon" href="/pwa-512x512.svg" />
+    
+    <!-- Windows tiles -->
+    <meta name="msapplication-TileColor" content="#000000" />
+    <meta name="msapplication-TileImage" content="/pwa-512x512.svg" />
+    
+    <!-- SEO -->
+    <meta name="description" content="SnapClone - Share moments with friends! Send snaps, chat, and stay connected." />
+    <meta name="keywords" content="snapchat, social, chat, snaps, friends, messaging" />
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content="SnapClone" />
+    <meta property="og:description" content="Share moments with friends! Send snaps, chat, and stay connected." />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/pwa-512x512.svg" />
+    
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <title>SnapClone</title>
+    
+    <!-- Splash screen styles -->
+    <style>
+      html, body {
+        background: #000;
+        margin: 0;
+        padding: 0;
+      }
+      #splash {
+        position: fixed;
+        inset: 0;
+        background: linear-gradient(180deg, #0d0d1a 0%, #000 100%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        transition: opacity 0.3s;
+      }
+      #splash.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #splash-logo {
+        width: 100px;
+        height: 100px;
+        background: linear-gradient(135deg, #FFFC00 0%, #ff9500 100%);
+        border-radius: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 24px;
+        animation: pulse 1.5s ease-in-out infinite;
+      }
+      #splash-logo svg {
+        width: 60px;
+        height: 60px;
+      }
+      #splash-text {
+        color: #fff;
+        font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+        font-size: 28px;
+        font-weight: 700;
+      }
+      @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Splash screen -->
+    <div id="splash">
+      <div id="splash-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+          <line x1="12" y1="19" x2="12" y2="22"/>
+        </svg>
+      </div>
+      <div id="splash-text">SnapClone</div>
+    </div>
+    
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+    <script>
+      // Hide splash after app loads
+      window.addEventListener('load', () => {
+        setTimeout(() => {
+          document.getElementById('splash')?.classList.add('hidden');
+          setTimeout(() => {
+            document.getElementById('splash')?.remove();
+          }, 300);
+        }, 500);
+      });
+    </script>
+  </body>
+</html>
+
